@@ -243,6 +243,8 @@ class Config extends CommonDBTM {
          if ($fields['context'] == 'core'
             && in_array($fields['name'], array('proxy_passwd', 'smtp_passwd'))) {
             unset($fields['value']);
+         } else {
+            $fields = Plugin::doHookFunction('undiscloseConfigValue', $fields);
          }
       }
    }
