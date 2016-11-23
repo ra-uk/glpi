@@ -381,10 +381,44 @@ $ curl -X POST \
 
 < 200 OK
 < {
-      'glpi_plugins': ...,
-      'glpicookietest': ...,
-      'glpicsrftokens': ...,
-      ...
+      'session': {
+         'glpi_plugins': ...,
+         'glpicookietest': ...,
+         'glpicsrftokens': ...,
+         ...
+      }
+   }
+```
+
+## Get GLPi config
+
+* **URL**: [apirest.php/getGlpiConfig/](getGlpiConfig/?debug)
+* **Description**: Return the current $CFG_GLPI.
+* **Method**: GET
+* **Parameters**: (Headers)
+  * *Session-Token*: session var provided by [initSession](#init-session) endpoint. Mandatory.
+  * *App-Token*: authorization string provided by the GLPi api configuration. Optional.
+* **Returns**:
+  * 200 (OK) with an array representing the php global variable $CFG_GLPI.
+  * 400 (Bad Request) with a message indicating an error in input parameter.
+
+Example usage (CURL):
+
+```bash
+$ curl -X POST \
+-H 'Content-Type: application/json' \
+-H "Session-Token: 83af7e620c83a50a18d3eac2f6ed05a3ca0bea62" \
+-H "App-Token: f7g3csp8mgatg5ebc5elnazakw20i9fyev1qopya7" \
+'http://path/to/glpi/apirest.php/getGlpiConfig'
+
+< 200 OK
+< {
+      'cfg_glpi': {
+         'languages': ...,
+         'glpitables': ...,
+         'unicity_types':...,
+         ...
+      }
    }
 ```
 
@@ -983,7 +1017,7 @@ $ curl -X POST \
 
 < 201 OK
 < Link: http://path/to/glpi/api/Computer/8,http://path/to/glpi/api/Computer/9
-< [ {"id":8, "message": ""}, {"id":false, "message": "You don't have permission to perform this action."}, {"id":9, "message": ""} ]
+< [ {"id":8}, {"id":false}, {"id":9} ]
 ```
 
 ## Update item(s)
@@ -1038,7 +1072,7 @@ $ curl -X PUT \
 'http://path/to/glpi/apirest.php/Computer/'
 
 < 200 OK
-[{"8":true, "message": ""},{"2":false, "message": "Item not found"}]
+[{"8":true},{"2":true}]
 ```
 
 ## Delete item(s)
@@ -1098,7 +1132,7 @@ $ curl -X DELETE \
 'http://path/to/glpi/apirest.php/Computer/'
 
 < 207 OK
-[{"16":true, "message": ""},{"17":false, "message": "Item not found"}]
+[{"16":true},{"17":false}]
 ```
 
 ## Errors
