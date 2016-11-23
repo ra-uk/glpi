@@ -1687,7 +1687,6 @@ abstract class API extends CommonGLPI {
                                                  $params['history']);
                   if ($delete_return === false) {
                      $failed++;
-                     $idCollection[] = array($object->id => $delete_return);
                   }
                   $idCollection[] = array($object->id => $delete_return, 'message' => $this->getGlpiLastMessage());
                }
