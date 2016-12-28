@@ -354,7 +354,7 @@ class APIRest extends API {
       }
 
       // now how about PUT/POST bodies? These override what we got from GET
-      $body = trim(file_get_contents("php://input"));
+      $body = trim($this->getHttpBodyStream());
       if (strlen($body) > 0 && $this->verb == "GET") {
          // GET method requires an empty body
          $this->returnError("GET Request should not have json payload (http body)", 400,
@@ -498,6 +498,15 @@ class APIRest extends API {
          echo $json;
       }
       exit;
+   }
+
+   /**
+    * get the raw HTTP request body
+    *
+    * @return string
+    */
+   protected function getHttpBodyStream() {
+      return file_get_contents('php://input');
    }
 
 
