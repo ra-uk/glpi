@@ -377,7 +377,7 @@ class CommonDBTM extends CommonGLPI {
 
       }
 
-      if (count($oldvalues) && isset($_SESSION['glpiactiveentities_string'])) {
+      if (count($oldvalues)) {
          Log::constructHistory($this, $oldvalues, $this->fields);
       }
 
@@ -1343,6 +1343,11 @@ class CommonDBTM extends CommonGLPI {
          $this->input['_delete'] = $this->input['delete'];
          unset($this->input['delete']);
       }
+
+      if (!isset($this->input['_no_history'])) {
+         $this->input['_no_history'] = !$history;
+      }
+
       // Purge
       if ($force) {
          Plugin::doHook("pre_item_purge", $this);
@@ -2011,7 +2016,7 @@ class CommonDBTM extends CommonGLPI {
          echo "<th colspan='$colspan'>";
          printf(__('Created on %s'), Html::convDateTime($this->fields["date_creation"]));
          echo "</th>";
-      } else {
+      } else if(!isset($options['withtemplate']) || $options['withtemplate'] == 0) {
          echo "<th colspan='$colspan'>";
          echo "</th>";
       }
@@ -2077,6 +2082,8 @@ class CommonDBTM extends CommonGLPI {
          }
       }
 
+      Plugin::doHook("post_item_form", ['item' => $this, 'options' => &$params]);
+
       if ($params['formfooter'] === null) {
           $this->showDates($params);
       }
@@ -2085,11 +2092,10 @@ class CommonDBTM extends CommonGLPI {
           || !$this->canEdit($ID)) {
          echo "</table></div>";
          // Form Header always open form
-         if (!$params['canedit']) {
-            Html::closeForm();
-         }
+         Html::closeForm();
          return false;
       }
+
       echo "<tr class='tab_bg_2'>";
 
       if ($params['withtemplate']
@@ -2387,6 +2393,8 @@ class CommonDBTM extends CommonGLPI {
          }
          echo "</th></tr>\n";
       }
+
+      Plugin::doHook("pre_item_form", ['item' => $this, 'options' => &$params]);
 
       // If in modal : do not display link on message after redirect
       if (isset($_REQUEST['_in_modal']) && $_REQUEST['_in_modal']) {
@@ -3757,8 +3765,9 @@ class CommonDBTM extends CommonGLPI {
     *
     * @param $crit   array    of criteria (ex array('is_active'=>'1'))
     * @param $force  boolean  force purge not on put in dustbin (default 0)
+    * @param $history boolean  do history log ? (true by default)
    **/
-   function deleteByCriteria($crit=array(), $force=0) {
+   function deleteByCriteria($crit=array(), $force=0, $history=1) {
       global $DB;
 
       $ok = false;
@@ -3766,7 +3775,7 @@ class CommonDBTM extends CommonGLPI {
          $crit['FIELDS'] = 'id';
          $ok = true;
          foreach ($DB->request($this->getTable(), $crit) as $row) {
-            if (!$this->delete($row, $force)) {
+            if (!$this->delete($row, $force, $history)) {
                $ok = false;
             }
          }
@@ -4372,7 +4381,7 @@ class CommonDBTM extends CommonGLPI {
                (strpos($target, '?') ? '&amp;' : '?')
                . "withtemplate=1";
             $target_create = $target . $create_params;
-            echo "<tr><td class='tab_bg_2 center b' colspan='2'>";
+            echo "<tr><td class='tab_bg_2 center b' colspan='3'>";
             echo "<a href=\"$target_create\">" . __('Add a template...') . "</a>";
             echo "</td></tr>";
          }

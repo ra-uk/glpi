@@ -171,8 +171,10 @@ class APIRest extends API {
 
          //add pagination headers
          $additionalheaders                  = array();
-         $additionalheaders["Content-Range"] = $response['content-range'];
          $additionalheaders["Accept-Range"]  = $itemtype." ".Toolbox::get_max_input_vars();
+         if ($response['totalcount'] > 0) {
+            $additionalheaders["Content-Range"] = $response['content-range'];
+         }
 
          // diffent http return codes for complete or partial response
          if ($response['count'] >= $response['totalcount']) {
@@ -216,15 +218,17 @@ class APIRest extends API {
                          $code = 206; // partial content
                      }
                   }
-                  $additionalheaders["Content-Range"] = implode('-', $range)."/".$totalcount;
                   $additionalheaders["Accept-Range"]  = $itemtype." ".Toolbox::get_max_input_vars();
+                  if ($totalcount > 0) {
+                     $additionalheaders["Content-Range"] = implode('-', $range)."/".$totalcount;
+                  }
                }
                break;
 
             case "POST" : // create item(s)
                $response = $this->createItems($itemtype, $this->parameters);
                $code     = 201;
-               if (count($response) == 1) {
+               if (isset($response['id'])) {
                   // add a location targetting created element
                   $additionalheaders['location'] = self::$api_url.$itemtype."/".$response['id'];
                } else {
@@ -242,6 +246,9 @@ class APIRest extends API {
                break;
 
             case "PUT" : // update item(s)
+               if (!isset($this->parameters['input'])) {
+                  $this->messageBadArrayError();
+               }
                // if id is passed by query string, add it into input parameter
                $input = (array) ($this->parameters['input']);
                if (($id > 0 || $id == 0 && $itemtype == "Entity")
@@ -254,15 +261,11 @@ class APIRest extends API {
             case "DELETE" : //delete item(s)
                // if id is passed by query string, construct an object with it
                if ($id !== false) {
-                  $code = 204;
                   //override input
                   $this->parameters['input']     = new stdClass();
                   $this->parameters['input']->id = $id;
                }
                $response = $this->deleteItems($itemtype, $this->parameters);
-               if ($id !== false) {
-                  $response = "";
-               }
                break;
          }
          return $this->returnResponse($response, $code, $additionalheaders);

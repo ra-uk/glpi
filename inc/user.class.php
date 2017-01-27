@@ -757,7 +757,10 @@ class User extends CommonDBTM {
          unset($input["password"]);
       }
 
-      if (isset($input["_extauth"])) {
+      // blank password when authtype changes
+      if (isset($input["authtype"])
+          && $input["authtype"] != Auth::DB_GLPI
+          && $input["authtype"] != $this->getField('authtype')) {
          $input["password"] = "";
       }
 
@@ -1915,9 +1918,15 @@ class User extends CommonDBTM {
          echo "<td>" . __('Password')."</td>";
          echo "<td><input id='password' type='password' name='password' value='' size='20'
                     autocomplete='off' onkeyup=\"return passwordCheck();\"></td>";
-         echo "<td rowspan='2'>".__('Password security policy')."</td>";
          echo "<td rowspan='2'>";
-         Config::displayPasswordSecurityChecks();
+         if ($CFG_GLPI["use_password_security"]) {
+            echo __('Password security policy');
+         }
+         echo "</td>";
+         echo "<td rowspan='2'>";
+         if ($CFG_GLPI["use_password_security"]) {
+            Config::displayPasswordSecurityChecks();
+         }
          echo "</td></tr>";
 
          echo "<tr class='tab_bg_1'>";
@@ -2245,10 +2254,15 @@ class User extends CommonDBTM {
             echo "<td>" . __('Password') . "</td>";
             echo "<td><input id='password' type='password' name='password' value='' size='30' autocomplete='off' onkeyup=\"return passwordCheck();\">";
             echo "</td>";
-            echo "<td rowspan='2'>".__('Password security policy')."</td>";
             echo "<td rowspan='2'>";
-            Config::displayPasswordSecurityChecks();
+            if ($CFG_GLPI["use_password_security"]) {
+               echo __('Password security policy');
+            }
             echo "</td>";
+            echo "<td rowspan='2'>";
+            if ($CFG_GLPI["use_password_security"]) {
+               Config::displayPasswordSecurityChecks();
+            }            echo "</td>";
             echo "</tr>";
 
             echo "<tr class='tab_bg_1'>";
@@ -3014,7 +3028,7 @@ class User extends CommonDBTM {
                   case 'create_ticket_validate' :
                      $where[]= " (`glpi_profilerights`.`name` = 'ticketvalidation'
                                   AND (`glpi_profilerights`.`rights` & ".TicketValidation::CREATEREQUEST."
-                                       OR `glpi_profilerights`.`rights` & ".TicketValidation::CREATEDEMAND.") ".
+                                       OR `glpi_profilerights`.`rights` & ".TicketValidation::CREATEINCIDENT.") ".
                                   getEntitiesRestrictRequest("AND", "glpi_profiles_users", '',
                                                              $entity_restrict, 1).") ";
                      $forcecentral = false;

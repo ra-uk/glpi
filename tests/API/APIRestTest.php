@@ -64,6 +64,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
             if ($e->hasResponse()) {
                $this->last_error = $e->getResponse();
             }
+            throw $e;
          }
       }
    }
@@ -351,7 +352,6 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $headers = $res->getHeaders();
       $this->assertArrayHasKey('Accept-Range', $headers);
       $this->assertContains('User', $headers['Accept-Range'][0]);
-      $this->assertArrayHasKey('Content-Range', $headers);
 
       $body = $res->getBody();
       $data = json_decode($body, true);
@@ -370,6 +370,25 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $first_user_date_mod = strtotime($first_user[19]);
       $second_user_date_mod = strtotime($second_user[19]);
       $this->assertLessThanOrEqual($first_user_date_mod, $second_user_date_mod);
+
+      $this->checkContentRange($data, $headers);
+   }
+
+
+   /**
+    * @depends testInitSessionCredentials
+    */
+   public function testSearchWithBadCriteria($session_token) {
+      // test retrieve all users
+      // multidimensional array of vars in query string not supported ? 
+      try {
+         $res = $this->doHttpRequest('GET', 'search/User/?criteria[0][field]=134343&criteria[0][searchtype]=contains&criteria[0][value]=dsadasd',
+                                             ['headers' => [
+                                                   'Session-Token' => $session_token]]);
+         $this->assertGreaterThanOrEqual(400, $res->getStatusCode());
+      } catch (ClientException $e) {
+         $this->assertEquals(400, $this->last_error->getStatusCode());
+      }
    }
 
 
@@ -412,6 +431,41 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $first_user_date_mod = strtotime($first_user[19]);
       $second_user_date_mod = strtotime($second_user[19]);
       $this->assertLessThanOrEqual($first_user_date_mod, $second_user_date_mod);
+
+      $this->checkContentRange($data, $headers);
+   }
+
+
+   /**
+    * @depends testInitSessionCredentials
+    */
+   public function testListSearchEmpty($session_token) {
+      $res = $this->doHttpRequest('GET', 'search/User/?criteria[0][field]=1&criteria[0][searchtype]=contains&criteria[0][value]=nonexistent',
+            ['headers' => [
+                  'Session-Token' => $session_token],
+                  'query' => [
+                        'sort'          => 19,
+                        'order'         => 'DESC',
+                        'range'         => '0-100',
+                        'forcedisplay'  => '81',
+                        'rawdata'       => true]]);
+      $this->assertNotEquals(null, $res, $this->last_error);
+      $this->assertEquals(200, $res->getStatusCode());
+      $headers = $res->getHeaders();
+      $this->assertArrayHasKey('Accept-Range', $headers);
+      $this->assertContains('User', $headers['Accept-Range'][0]);
+
+      $body = $res->getBody();
+      $data = json_decode($body, true);
+      $this->assertNotEquals(false, $data);
+      $this->assertArrayHasKey('totalcount', $data);
+      $this->assertArrayHasKey('count', $data);
+      $this->assertArrayHasKey('sort', $data);
+      $this->assertArrayHasKey('order', $data);
+      $this->assertArrayHasKey('rawdata', $data);
+      $this->assertEquals(8, count($data['rawdata']));
+
+      $this->checkEmptyContentRange($data, $headers);
    }
 
 
@@ -423,18 +477,20 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
          $res = $this->doHttpRequest('GET', 'badEndpoint/',
                                             ['headers' => [
                                              'Session-Token' => $session_token]]);
+        $this->assertGreaterThanOrEqual(400, $res->getStatusCode());
       } catch (ClientException $e) {
          $response = $e->getResponse();
-         $this->assertEquals(400, $response->getStatusCode());
+         $this->assertEquals(400, $this->last_error->getStatusCode());
       }
 
       try {
          $res = $this->doHttpRequest('GET', 'Entity/0/badEndpoint/',
                                             ['headers' => [
                                              'Session-Token' => $session_token]]);
+         $this->assertGreaterThanOrEqual(400, $res->getStatusCode());
       } catch (ClientException $e) {
          $response = $e->getResponse();
-         $this->assertEquals(400, $response->getStatusCode());
+         $this->assertEquals(400, $this->last_error->getStatusCode());
       }
    }
 
@@ -459,6 +515,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $computers_id = $data['id'];
       $this->assertEquals(true, is_numeric($computers_id));
       $this->assertEquals(true, $computers_id > 0);
+      $this->assertArrayHasKey('message', $data);
 
       $computer = new Computer;
       $computers_exist = $computer->getFromDB($computers_id);
@@ -487,6 +544,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $data = json_decode($body, true);
       $this->assertNotEquals(false, $data);
       $this->assertArrayHasKey('id', $data);
+      $this->assertArrayHasKey('message', $data);
       $netports_id = $data['id'];
 
       $res = $this->doHttpRequest('POST', 'Notepad/',
@@ -504,6 +562,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $data = json_decode($body, true);
       $this->assertNotEquals(false, $data);
       $this->assertArrayHasKey('id', $data);
+      $this->assertArrayHasKey('message', $data);
 
       return $computers_id;
    }
@@ -537,6 +596,8 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $this->assertEquals(true, is_numeric($secnd_computer['id']));
       $this->assertEquals(true, $first_computer['id'] > 0);
       $this->assertEquals(true, $secnd_computer['id'] > 0);
+      $this->assertArrayHasKey('message', $data[0]);
+      $this->assertArrayHasKey('message', $data[1]);
 
 
       $computer = new Computer;
@@ -780,9 +841,10 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
          $res = $this->doHttpRequest('GET', "ticket/$tickets_id",
                                             ['headers' => [
                                                 'Session-Token' => $data['session_token']]]);
+         $this->assertGreaterThanOrEqual(400, $res->getStatusCode());
       } catch (ClientException $e) {
          $response = $e->getResponse();
-         $this->assertEquals(401, $res->getStatusCode());
+         $this->assertEquals(401, $this->last_error->getStatusCode());
       }
 
       // try to access ticket list (we should get empty return)
@@ -820,12 +882,24 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $this->assertNotEquals(false, $data);
       $computer = array_shift($data);
       $this->assertArrayHasKey($computers_id, $computer);
+      $this->assertArrayHasKey('message', $computer);
       $this->assertEquals(true, (bool) $computer[$computers_id]);
 
       $computer = new Computer;
       $computers_exist = $computer->getFromDB($computers_id);
       $this->assertEquals(true, (bool) $computers_exist);
       $this->assertEquals("abcdef", $computer->fields['serial']);
+
+      //try to update an item without input
+      try {
+         $res = $this->doHttpRequest('PUT', 'Computer/',
+                                     ['headers' => [
+                                         'Session-Token' => $session_token],
+                                      'json' => []]);
+      } catch (ClientException $e) {
+         $response = $e->getResponse();
+         $this->assertEquals(400, $this->last_error->getStatusCode());
+      }
    }
 
 
@@ -848,6 +922,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $this->assertNotEquals(false, $data);
       $computer = array_shift($data);
       $this->assertArrayHasKey($computers_id, $computer);
+      $this->assertArrayHasKey('message', $computer);
       $this->assertEquals(true, (bool) $computer[$computers_id]);
 
       $computer = new Computer;
@@ -882,6 +957,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       foreach($data as $index => $row) {
          $computers_id = $computers_id_collection[$index]['id'];
          $this->assertArrayHasKey($computers_id, $row);
+         $this->assertArrayHasKey('message', $row);
          $this->assertEquals(true, (bool) $row[$computers_id]);
 
          $computers_exist = $computer->getFromDB($computers_id);
@@ -900,13 +976,16 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
                                          ['headers' => [
                                              'Session-Token' => $session_token],
                                           'query' => [
-                                             'force_purge'   => true]]);
+                                             'force_purge'   => "true"]]);
       $this->assertNotEquals(null, $res, $this->last_error);
-      $this->assertEquals(204, $res->getStatusCode());
+      $this->assertEquals(200, $res->getStatusCode());
 
       $body = $res->getBody();
       $data = json_decode($body, true);
-      $this->assertEquals(NULL, $data);
+      $this->assertNotEquals(false, $data);
+      $computer = array_shift($data);
+      $this->assertArrayHasKey($computers_id, $computer);
+      $this->assertArrayHasKey('message', $computer);
 
       $computer = new Computer;
       $computers_exist = $computer->getFromDB($computers_id);
@@ -939,6 +1018,7 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       foreach($data as $index => $row) {
          $computers_id = $computers_id_collection[$index]['id'];
          $this->assertArrayHasKey($computers_id, $row);
+         $this->assertArrayHasKey('message', $row);
          $this->assertEquals(true, (bool) $row[$computers_id]);
 
          $computers_exist = $computer->getFromDB($computers_id);
@@ -969,7 +1049,9 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
       $data = json_decode($body, true);
       $this->assertNotEquals(false, $data);
       $this->assertTrue($data[1][0][$computers_id_collection[0]['id']]);
+      $this->assertArrayHasKey('message', $data[1][0]);
       $this->assertFalse($data[1][1][$computers_id_collection[1]['id']]);
+      $this->assertArrayHasKey('message', $data[1][1]);
    }
 
    /**
@@ -980,14 +1062,14 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
                                          ['headers' => [
                                              'Session-Token' => $session_token],
                                           'json' => [
-                                             'input'         => [[
+                                             'input'         => [
                                                 'name' => "my computer', (SELECT `password` from `glpi_users` as `otherserial` WHERE `id`=2), '0 ' , '2016-10-26 00:00:00', '2016-10-26 00 :00 :00')#"
                                              ,
-                                                'otherserial' => "Not hacked"]]]]);
+                                                'otherserial' => "Not hacked"]]]);
 
       $body = $res->getBody();
       $data = json_decode($body, true);
-      $new_id = $data[0]['id'];
+      $new_id = $data['id'];
 
       $computer = new Computer();
       $computer_exists = $computer->getFromDB($new_id);
@@ -1080,32 +1162,6 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
 
 
    /**
-    * @depends testInitSessionCredentials
-    */
-   public function testGetGlpiConfig($session_token) {
-      $res = $this->doHttpRequest('GET', 'getGlpiConfig/',
-            ['headers' => [
-                  'Session-Token' => $session_token]]);
-      $this->assertNotEquals(null, $res, $this->last_error);
-      $this->assertEquals(200, $res->getStatusCode());
-
-      $body = $res->getBody();
-      $data = json_decode($body, true);
-
-      // Test a disclosed data
-      $this->assertArrayHasKey('cfg_glpi', $data);
-      $this->assertArrayHasKey('infocom_types', $data['cfg_glpi']);
-
-      // Test undisclosed data are actually not disclosed
-      $this->assertGreaterThan(0, count(Config::$undisclosedFields));
-      foreach (Config::$undisclosedFields as $key) {
-         $this->assertArrayNotHasKey($key, $data['cfg_glpi']);
-      }
-
-   }
-
-
-   /**
      * @depends testInitSessionCredentials
      */
    public function testKillSession($session_token) {
@@ -1124,5 +1180,31 @@ class APIRestTest extends PHPUnit_Framework_TestCase {
          $response = $e->getResponse();
          $this->assertEquals(401, $response->getStatusCode());
       }
+   }
+
+
+   /**
+    * Check consistency of Content-Range header
+    *
+    * @param array $data
+    * @param array $headers
+    */
+   protected function checkContentRange($data, $headers) {
+      $this->assertLessThanOrEqual($data['totalcount'], $data['count']);
+      $this->assertArrayHasKey('Content-Range', $headers);
+      $expectedContentRange = '0-'.($data['count'] - 1).'/'.$data['totalcount'];
+      $this->assertEquals($expectedContentRange, $headers['Content-Range'][0]);
+   }
+
+   /**
+    * Check consistency of Content-Range header
+    *
+    * @param array $data
+    * @param array $headers
+    */
+   protected function checkEmptyContentRange($data, $headers) {
+      $this->assertLessThanOrEqual($data['totalcount'], $data['count']);
+      $this->assertEquals(0, $data['totalcount']);
+      $this->assertArrayNotHasKey('Content-Range', $headers);
    }
 }

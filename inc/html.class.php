@@ -1232,7 +1232,7 @@ class Html {
 
          //fullcalendar
          $filename = "/lib/jqueryplugins/fullcalendar/locale/".
-                     $CFG_GLPI["languages"][$_SESSION['glpilanguage']][2].".js";
+                     strtolower($CFG_GLPI["languages"][$_SESSION['glpilanguage']][2]).".js";
          if (file_exists(GLPI_ROOT.$filename)) {
             echo Html::script($CFG_GLPI["root_doc"].$filename);
          }
@@ -1506,15 +1506,10 @@ class Html {
       echo "<ul>";
 
       echo "<li id='deconnexion'>";
-      echo "<a href='".$CFG_GLPI["root_doc"]."/front/logout.php";
-            /// logout witout noAuto login for extauth
-      if (isset($_SESSION['glpiextauth']) && $_SESSION['glpiextauth']) {
-         echo "?noAUTO=1";
-      }
-
-      echo "' title=\"".__s('Logout')."\">";
+      echo "<a href='".$CFG_GLPI["root_doc"].
+                       "/front/logout.php?noAUTO=1' title=\"".__s('Logout')."\">";
       echo "<span id='logout_icon' title=\"".__s('Logout').
-             "\"  alt=\"".__s('Logout')."\" class='button-icon' />";
+             "\"  alt=\"".__s('Logout')."\" class='button-icon'></span>";
       echo "</a>";
       echo "</li>\n";
 
@@ -1598,10 +1593,7 @@ class Html {
                $link = $CFG_GLPI["root_doc"].$data['default'];
             }
 
-            if (Toolbox::strlen($data['title']) > 14) {
-               $data['title'] = Toolbox::substr($data['title'], 0, 14)."...";
-            }
-            echo "<a href='$link' class='itemP'>".$data['title']."</a>";
+            echo "<a href='$link' class='itemP' title='{$data['title']}'>".self::getMenuText($data['title'])."</a>";
             echo "<ul class='ssmenu'>";
 
 
@@ -1965,7 +1957,7 @@ class Html {
 
          foreach ($links as $name => $link) {
             echo "<li id='menu$i'>";
-            echo "<a href='$link' title=\"".$name."\" class='itemP'>".$name."</a>";
+            echo "<a href='$link' title=\"".$name."\" class='itemP'>".self::getMenuText($name)."</a>";
             echo "</li>";
             $i++;
          }
@@ -2035,8 +2027,8 @@ class Html {
 
       echo "' title=\"".__s('Logout')."\">";
       // check user id : header used for display messages when session logout
-      echo "<img src='".$CFG_GLPI["root_doc"]."/pics/logout.png' title=\"".__s('Logout').
-             "\"  alt=\"".__s('Logout')."\" class='button-icon'>";
+      echo "<span id='logout_icon' title=\"".__s('Logout').
+             "\"  alt=\"".__s('Logout')."\" class='button-icon'></span>";
       echo "</a>";
       echo "</li>\n";
 
@@ -2133,7 +2125,7 @@ class Html {
       foreach ($menu as $menu_item) {
          echo "<li id='".$menu_item['id']."'>";
          echo "<a href='".$CFG_GLPI["root_doc"].$menu_item['default']."' ".
-                "title=\"".$menu_item['title']."\" class='itemP'>".$menu_item['title']."</a>";
+                "title=\"".$menu_item['title']."\" class='itemP'>".self::getMenuText($menu_item['title'])."</a>";
          echo "</li>";
       }
 
@@ -2191,7 +2183,7 @@ class Html {
              __('Home')."</a></li>";
 
 
-      if (TicketValidation::getValidateRights()) {
+      if (Session::haveRightsOr('ticketvalidation', TicketValidation::getValidateRights())) {
          $opt                              = array();
          $opt['reset']                     = 'reset';
          $opt['criteria'][0]['field']      = 55; // validation status
@@ -3915,7 +3907,10 @@ class Html {
 
       $language = $_SESSION['glpilanguage'];
       if (!file_exists(GLPI_ROOT."/lib/tiny_mce/langs/$language.js")) {
-         $language = "en_GB";
+         $language = $CFG_GLPI["languages"][$_SESSION['glpilanguage']][2];
+         if (!file_exists(GLPI_ROOT."/lib/tiny_mce/langs/$language.js")) {
+            $language = "en_GB";
+         }
       }
 
       Html::scriptStart();
@@ -3933,9 +3928,9 @@ class Html {
          plugins: [
             'table directionality searchreplace paste',
             'tabfocus autoresize link image',
-            'code fullscreen'
+            'code fullscreen textcolor colorpicker'
          ],
-         toolbar: 'styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image code fullscreen',
+         toolbar: 'styleselect | bold italic | forecolor backcolor | bullist numlist outdent indent | table link image | code fullscreen',
       });
    ";
 
@@ -4049,7 +4044,7 @@ class Html {
       // Print the "where am I?"
       echo "<td width='50%' class='tab_bg_2 b'>";
       //TRANS: %1$d, %2$d, %3$d are page numbers
-      echo sprintf(__('From %1$d to %2$d on %3$d'), $current_start, $current_end, $numrows);
+      echo sprintf(__('From %1$d to %2$d of %3$d'), $current_start, $current_end, $numrows);
       echo "</td>\n";
 
       // Forward and fast forward button
@@ -4237,7 +4232,7 @@ class Html {
 
       echo "<td width='20%' class='tab_bg_2 b'>";
       //TRANS: %1$d, %2$d, %3$d are page numbers
-      printf(__('From %1$d to %2$d on %3$d'), $current_start, $current_end, $numrows);
+      printf(__('From %1$d to %2$d of %3$d'), $current_start, $current_end, $numrows);
       echo "</td>\n";
 
       // Forward and fast forward button
@@ -5831,10 +5826,24 @@ class Html {
       $message = "<a href=\"http://glpi-project.org/\" title=\"Powered By Teclib\" class=\"copyright\">";
       $message .= "GLPI " .
          (isset($CFG_GLPI["version"]) ? $CFG_GLPI['version'] : GLPI_VERSION) .
-         " Copyright (C) 2015-" . GLPI_YEAR . " Teclib'".
+         " Copyright (C) 2015-" . GLPI_YEAR . " Teclib' and contributors".
          " - Copyright (C) 2003-2015 INDEPNET Development Team".
          "</a>";
       return $message;
+   }
+
+   /**
+    * Get text for menu, shortened if needed
+    *
+    * @param string $text Menu text
+    *
+    * @return string
+    */
+   static public function getMenuText($text) {
+      if (Toolbox::strlen($text) > 14) {
+         $text = Toolbox::substr($text, 0, 14)."...";
+      }
+      return $text;
    }
 }
 

@@ -467,6 +467,11 @@ input.save {
    top: 105px;
 }
 
+#page .mce-btn-group:not(:first-child) {
+   border-left: 1px solid #d9d9d9;
+   padding-left: 0;
+   margin-left: 0;
+}
 
 
 .entity_select:hover {
@@ -694,7 +699,7 @@ input.save {
    .layout_vsplit.form table.tab_cadre_pager {
       margin: 0;
       border: 0;
-      width: 150px;
+      min-width: 150px;
    }
 
    .layout_vsplit.form .ui-tabs-panel table.tab_cadre_pager {
@@ -1552,6 +1557,8 @@ a.icon_nav_move:hover img {
    background-color: #fff;
    border-radius: 5px;
    max-width: 950px;
+   margin: .5em auto;
+   padding: .5em;
 }
 
 
@@ -1954,7 +1961,7 @@ a.icon_nav_move:hover img {
    font-family:"Myriad Pro","Myriad Web","Tahoma","Helvetica","Arial",sans-serif;
    color:#393939;
    font-size: 11px;
-   background: #CDE4CB;
+   background: #DFDFDF;
 }
 
 .message_after_redirect h3 {
@@ -1986,14 +1993,10 @@ a.icon_nav_move:hover img {
 }
 
 /* ##### INFO messages ##### */
-.ui-widget-content.message_after_redirect.info_msg {
-   background-color: #a3abc0;
-}
-
 .message_after_redirect.info_msg div.ui-widget-header {
    color: white;
-   background: rgba(27, 47, 98, .8);
-   border-color: rgba(27, 47, 98, 0.8);
+   background: #A9A9A9;
+   border-color: #A9A9A9;
 }
 
 /* ################--------------- Login Null Header  ---------------#################### */

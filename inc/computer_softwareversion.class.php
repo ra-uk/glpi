@@ -570,23 +570,24 @@ class Computer_SoftwareVersion extends CommonDBRelation {
                $lics = Computer_SoftwareLicense::getLicenseForInstallation($data['cID'],
                                                                            $data['vID']);
                echo "<td>";
-               echo "<td>".Html::convDate($data['date_install'])."</td>";
 
                if (count($lics)) {
-                  foreach ($lics as $data) {
-                     $serial = $data['serial'];
+                  foreach ($lics as $lic) {
+                     $serial = $lic['serial'];
 
-                     if (!empty($data['type'])) {
-                        $serial = sprintf(__('%1$s (%2$s)'), $serial, $data['type']);
+                     if (!empty($lic['type'])) {
+                        $serial = sprintf(__('%1$s (%2$s)'), $serial, $lic['type']);
                      }
 
-                     echo "<a href='softwarelicense.form.php?id=".$data['id']."'>".$data['name'];
+                     echo "<a href='softwarelicense.form.php?id=".$lic['id']."'>".$lic['name'];
                      echo "</a> - ".$serial;
 
                      echo "<br>";
                   }
                }
                echo "</td>";
+
+               echo "<td>".Html::convDate($data['date_install'])."</td>";
                echo "</tr>\n";
 
             } while ($data = $DB->fetch_assoc($result));
@@ -840,6 +841,7 @@ class Computer_SoftwareVersion extends CommonDBRelation {
          echo "<form method='post' action='".$CFG_GLPI["root_doc"].
                 "/front/computer_softwarelicense.form.php'>";
          echo "<div class='spaced'><table class='tab_cadre_fixe'>";
+         echo "<tr class='tab_bg_1'><th colspan='2'>".SoftwareLicense::getTypeName(Session::getPluralNumber())."</th></tr>";
          echo "<tr class='tab_bg_1'>";
          echo "<td class='center'>";
          echo _n('License', 'Licenses', Session::getPluralNumber())."&nbsp;&nbsp;";
@@ -931,6 +933,8 @@ class Computer_SoftwareVersion extends CommonDBRelation {
             Html::showMassiveActions($massiveactionparams);
             Html::closeForm();
          }
+      } else {
+         echo "<p class='center b'>".__('No item found')."</p>";
       }
 
       echo "</div>\n";
