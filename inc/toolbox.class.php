@@ -2490,6 +2490,39 @@ class Toolbox {
    }
 
    /**
+    * Remove accentued characters and return lower case string
+    *
+    * @param string $string String to handle
+    *
+    * @return string
+    */
+   public static function removeHtmlSpecialChars($string) {
+      $string = htmlentities($string, ENT_NOQUOTES, 'utf-8');
+      $string = preg_replace(
+            '#&([A-za-z])(?:acute|cedil|caron|circ|grave|orn|ring|slash|th|tilde|uml);#',
+            '\1',
+            $string
+            );
+      $string = preg_replace('#&([A-za-z]{2})(?:lig);#', '\1', $string);
+      $string = preg_replace('#&[^;]+;#', '', $string);
+      return self::strtolower($string, 'UTF-8');
+   }
+
+   /**
+    * Slugify
+    *
+    * @param string $string String to slugify
+    *
+    * @return string
+    */
+   public static function slugify($string) {
+      $string = str_replace(' ', '-', self::strtolower($string, 'UTF-8'));
+      $string = self::removeHtmlSpecialChars($string);
+      $string = preg_replace('~[^0-9a-z]+~i', '-', $string);
+      return trim($string, '-');
+   }
+
+   /**
     * Decode JSON in GLPI
     * Because json can have been modified from addslashes_deep
     *

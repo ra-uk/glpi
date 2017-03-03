@@ -1131,6 +1131,12 @@ class Html {
       echo Html::css($CFG_GLPI["root_doc"]."/lib/jqueryplugins/fullcalendar/fullcalendar.print.min.css",
                      array('media' => 'print'));
       echo Html::css($CFG_GLPI["root_doc"]."/css/jquery-glpi.css");
+
+      // chartist backported CSS
+      echo Html::css($CFG_GLPI["root_doc"]."/lib/chartist-js-0.10.1/chartist.min.css");
+      echo Html::css($CFG_GLPI["root_doc"]."/css/chartists-glpi.css");
+      echo Html::css($CFG_GLPI["root_doc"]."/lib/chartist-plugin-tooltip-0.0.17/chartist-plugin-tooltip.css");
+
       if (CommonGLPI::isLayoutWithMain()
           && !CommonGLPI::isLayoutExcludedPage()) {
          echo Html::css($CFG_GLPI["root_doc"]."/lib/jqueryplugins/jquery-ui-scrollable-tabs/css/jquery.scrollabletab.min.css");
@@ -1204,6 +1210,12 @@ class Html {
       echo Html::script($CFG_GLPI["root_doc"]."/lib/jqueryplugins/autogrow/jquery.autogrow-textarea.min.js");
       echo Html::script($CFG_GLPI["root_doc"]."/lib/jqueryplugins/fullcalendar/lib/moment.min.js");
       echo Html::script($CFG_GLPI["root_doc"]."/lib/jqueryplugins/fullcalendar/fullcalendar.min.js");
+
+      // chartist backported JS
+      echo Html::script($CFG_GLPI["root_doc"]."/lib/chartist-js-0.10.1/chartist.js");
+      echo Html::script($CFG_GLPI["root_doc"]."/lib/chartist-plugin-legend-0.6.0/chartist-plugin-legend.js");
+      echo Html::script($CFG_GLPI["root_doc"]."/lib/chartist-plugin-tooltip-0.0.17/chartist-plugin-tooltip.js");
+
 
       // layout
       if (CommonGLPI::isLayoutWithMain()

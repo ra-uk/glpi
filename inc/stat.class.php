@@ -9,7 +9,7 @@
 
  based on GLPI - Gestionnaire Libre de Parc Informatique
  Copyright (C) 2003-2014 by the INDEPNET Development Team.
- 
+
  -------------------------------------------------------------------------
 
  LICENSE
@@ -1635,5 +1635,228 @@ class Stat extends CommonGLPI {
       return $values;
    }
 
+   /**
+    * Display line graph
+    *
+    * @param string   $title  Graph title
+    * @param string[] $labels Labels to display
+    * @param array    $series Series data. An array of the form:
+    *                 [
+    *                    ['name' => 'a name', 'data' => []],
+    *                    ['name' => 'another name', 'data' => []]
+    *                 ]
+    * @param integer  $witdh    Graph width. Defaults to 900
+    * @param boolean  $display  Whether to display directly; defauts to true
+    *
+    * @return void
+    */
+   public function displayLineGraph($title, $labels, $series, $options = null, $display = true) {
+
+      $param = [
+         'width'   => 900,
+         'height'  => 300,
+         'tooltip' => true,
+         'legend'  => true,
+         'animate' => true
+      ];
+
+      if (is_array($options) && count($options)) {
+         foreach ($options as $key => $val) {
+            $param[$key] = $val;
+         }
+      }
+
+      $slug = str_replace('-', '_', Toolbox::slugify($title));
+      $this->checkEmptyLabels($labels);
+      $out = "<h2 class='center'>$title</h2>";
+      $out .= "<div id='$slug' class='chart'></div>";
+      Html::requireJs('charts');
+      $out .= "<script type='text/javascript'>
+                  $(function() {
+                     var chart_$slug = new Chartist.Line('#$slug', {
+                        labels: ['" . implode('\', \'', Toolbox::addslashes_deep($labels))  . "'],
+                        series: [";
+
+      $first = true;
+      foreach ($series as $serie) {
+         if ($first === true) {
+            $first = false;
+         } else {
+            $out .= ",\n";
+         }
+         $serieData = implode(', ', $serie['data']);
+         if (isset($serie['name'])) {
+            $serieLabel = Toolbox::addslashes_deep($serie['name']);
+            $out .= "{'name': '$serieLabel', 'data': [$serieData]}";
+         } else {
+            $out .= "[$serieData]";
+         }
+      }
+
+      $out .= "
+                        ]
+                     }, {
+                        low: 0,
+                        showArea: true,
+                        width: '{$param['width']}',
+                        height: '{$param['height']}',
+                        fullWidth: true,
+                        lineSmooth: Chartist.Interpolation.simple({
+                           divisor: 10,
+                           fillHoles: false
+                        }),
+                        axisX: {
+                           labelOffset: {
+                              x: -" . mb_strlen($labels[0]) * 7  . "
+                           }
+                        }";
+
+      if ($param['legend'] === true || $param['tooltip'] === true) {
+         $out .= ", plugins: [";
+         if ($param['legend'] === true) {
+            $out .= "Chartist.plugins.legend()";
+         }
+         if ($param['tooltip'] === true) {
+            $out .= ($param['legend'] === true ? ',' : '') . "Chartist.plugins.tooltip()";
+         }
+         $out .= "]";
+      }
+
+      $out .= "});";
+
+      if ($param['animate'] === true) {
+                  $out .= "
+                     chart_$slug.on('draw', function(data) {
+                        if(data.type === 'line' || data.type === 'area') {
+                           data.element.animate({
+                              d: {
+                                 begin: 300 * data.index,
+                                 dur: 500,
+                                 from: data.path.clone().scale(1, 0).translate(0, data.chartRect.height()).stringify(),
+                                 to: data.path.clone().stringify(),
+                                 easing: Chartist.Svg.Easing.easeOutQuint
+                              }
+                           });
+                        }
+                     });
+                  });";
+      }
+      $out .="</script>";
+
+      if ($display) {
+         echo $out;
+         return;
+      }
+      return $out;
+   }
+
+   /**
+    * Display pie graph
+    *
+    * @param string   $title  Graph title
+    * @param string[] $labels Labels to display
+    * @param array    $series Series data. An array of the form:
+    *                 [
+    *                    ['name' => 'a name', 'data' => []],
+    *                    ['name' => 'another name', 'data' => []]
+    *                 ]
+    * @param boolean  $display  Whether to display directly; defauts to true
+    *
+    * @return void
+    */
+   public function displayPieGraph($title, $labels, $series, $display = true) {
+      $slug = str_replace('-', '_', Toolbox::slugify($title));
+      $this->checkEmptyLabels($labels);
+      $out = "<h2 class='center'>$title</h2>";
+      $out .= "<div id='$slug' class='chart'></div>";
+      $out .= "<script type='text/javascript'>
+                  $(function() {
+                     var $slug = new Chartist.Pie('#$slug', {
+                        labels: ['" . implode('\', \'', Toolbox::addslashes_deep($labels))  . "'],
+                        series: [";
+
+      $first = true;
+      foreach ($series as $serie) {
+         if ($first === true) {
+            $first = false;
+         } else {
+            $out .= ",\n";
+         }
+
+         $serieLabel = Toolbox::addslashes_deep($serie['name']);
+         $serieData = $serie['data'];
+         $out .= "{'meta': '$serieLabel', 'value': '$serieData'}";
+      }
+
+      $out .= "
+                        ]
+                     }, {
+                        donut: true,
+                        showLabel: false,
+                        height: 300,
+                        width: 300,
+                        plugins: [
+                           Chartist.plugins.legend(),
+                           Chartist.plugins.tooltip()
+                        ]
+                     });
+
+                     $slug.on('draw', function(data) {
+                        if(data.type === 'slice') {
+                           // Get the total path length in order to use for dash array animation
+                           var pathLength = data.element._node.getTotalLength();
+
+                           // Set a dasharray that matches the path length as prerequisite to animate dashoffset
+                           data.element.attr({
+                              'stroke-dasharray': pathLength + 'px ' + pathLength + 'px'
+                           });
+
+                           // Create animation definition while also assigning an ID to the animation for later sync usage
+                           var animationDefinition = {
+                              'stroke-dashoffset': {
+                                 id: 'anim' + data.index,
+                                 dur: 300,
+                                 from: -pathLength + 'px',
+                                 to:  '0px',
+                                 easing: Chartist.Svg.Easing.easeOutQuint,
+                                 // We need to use `fill: 'freeze'` otherwise our animation will fall back to initial (not visible)
+                                 fill: 'freeze'
+                              }
+                           };
+
+                           // We need to set an initial value before the animation starts as we are not in guided mode which would do that for us
+                           data.element.attr({
+                              'stroke-dashoffset': -pathLength + 'px'
+                           });
+
+                           // We can't use guided mode as the animations need to rely on setting begin manually
+                           // See http://gionkunz.github.io/chartist-js/api-documentation.html#chartistsvg-function-animate
+                           data.element.animate(animationDefinition, false);
+                        }
+                     });
+                  });
+              </script>";
+
+      if ($display) {
+         echo $out;
+         return;
+      }
+      return $out;
+   }
+
+   /**
+    * Check and replace empty labels
+    *
+    * @param array $labels Labels
+    *
+    * @return void
+    */
+   private function checkEmptyLabels(&$labels) {
+      foreach ($labels as &$label) {
+         if (empty($label)) {
+            $label = '-';
+         }
+      }
+   }
 }
 ?>
